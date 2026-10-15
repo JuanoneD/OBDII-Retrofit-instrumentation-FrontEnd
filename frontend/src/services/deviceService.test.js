@@ -18,14 +18,17 @@ describe('recalculateFuel', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      text: vi.fn().mockResolvedValue('{"newFactor":1.2345}'),
+      text: vi
+        .fn()
+        .mockResolvedValueOnce('')
+        .mockResolvedValueOnce('{"fuelConsumptionFactor":1.2345}'),
     })
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await recalculateFuel({
       deviceId: 'ESP32-A1/2',
       refueledGas: 4.4,
-      token: 'Bearer jwt-de-teste',
+      token: 'jwt-de-teste',
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -34,10 +37,22 @@ describe('recalculateFuel', () => {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          Authorization: 'Bearer jwt-de-teste',
+          Authorization: 'Token jwt-de-teste',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ refueledGas: 4.4 }),
+      }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/devices?idDevice=ESP32-A1%2F2',
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Token jwt-de-teste',
+          'Content-Type': 'application/json',
+        },
       }),
     )
     expect(result.newFactor).toBe(1.2345)

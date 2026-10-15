@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 function normalizeToken(token) {
-  return token.trim().replace(/^Bearer\s+/i, '')
+  return token.trim().replace(/^(?:Bearer|Token)\s+/i, '')
 }
 
 function getApiErrorMessage(status, payload) {
@@ -60,11 +60,11 @@ export async function recalculateFuel({ deviceId, refueledGas, token }) {
   }
 
   if (token.trim()) {
-    headers.Authorization = `Bearer ${normalizeToken(token)}`
+    headers.Authorization = `Token ${normalizeToken(token)}`
   }
 
   try {
-    const response = await fetch(
+    const recalculateResponse = await fetch(
       `${API_BASE_URL}/devices/resetAndRecalculate?idDevice=${encodeURIComponent(deviceId)}`,
       {
         method: 'POST',
@@ -73,15 +73,38 @@ export async function recalculateFuel({ deviceId, refueledGas, token }) {
         signal: controller.signal,
       },
     )
-    const payload = await readResponse(response)
+    const recalculatePayload = await readResponse(recalculateResponse)
 
-    if (!response.ok) {
-      throw new ApiError(getApiErrorMessage(response.status, payload), response.status, payload)
+    if (!recalculateResponse.ok) {
+      throw new ApiError(
+        getApiErrorMessage(recalculateResponse.status, recalculatePayload),
+        recalculateResponse.status,
+        recalculatePayload,
+      )
+    }
+
+    const deviceResponse = await fetch(
+      `${API_BASE_URL}/devices?idDevice=${encodeURIComponent(deviceId)}`,
+      {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      },
+    )
+    const devicePayload = await readResponse(deviceResponse)
+
+    if (!deviceResponse.ok) {
+      throw new ApiError(
+        getApiErrorMessage(deviceResponse.status, devicePayload),
+        deviceResponse.status,
+        devicePayload,
+      )
     }
 
     return {
-      payload,
-      newFactor: extractNewFactor(payload),
+      payload: devicePayload,
+      recalculatePayload,
+      newFactor: extractNewFactor(devicePayload),
     }
   } catch (error) {
     if (error.name === 'AbortError') {

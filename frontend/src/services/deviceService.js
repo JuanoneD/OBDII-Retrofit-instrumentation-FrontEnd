@@ -1,124 +1,111 @@
 import { extractNewFactor } from '../utils/fuel.js'
+import { ApiError, apiRequest } from './apiClient.js'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(
-  /\/$/,
-  '',
-)
-const REQUEST_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 12000
+const NUMBER_FIELDS = [
+  'gasolineLevel',
+  'tankCapacity',
+  'fuelConsumptionFactor',
+  'totalDistance',
+  'tripConsumption',
+]
 
-export class ApiError extends Error {
-  constructor(message, status = 0, payload = null) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.payload = payload
-  }
-}
-
-function normalizeToken(token) {
-  return token.trim().replace(/^(?:Bearer|Token)\s+/i, '')
-}
-
-function getApiErrorMessage(status, payload) {
-  const backendMessage =
-    payload?.message || payload?.title || payload?.error || payload?.detail
-
-  if (backendMessage) {
-    return backendMessage
-  }
-
-  const messages = {
-    400: 'Os dados enviados não foram aceitos. Confira os campos.',
-    401: 'Sua sessão não é válida. Informe um token de acesso atualizado.',
-    403: 'Você não tem permissão para recalibrar este veículo.',
-    404: 'Dispositivo não encontrado. Confira o identificador.',
-  }
-
-  return messages[status] || 'Não foi possível concluir a recalibração.'
-}
-
-async function readResponse(response) {
-  const text = await response.text()
-
-  if (!text) {
+function normalizeDevice(device) {
+  if (!device || typeof device !== 'object' || Array.isArray(device)) {
     return null
   }
 
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
+  const normalized = {
+    ...device,
+    idDevice: String(device.idDevice || device.id || ''),
+    name: String(device.name || ''),
   }
+
+  for (const field of NUMBER_FIELDS) {
+    const rawValue = device[field]
+    const value = rawValue === null || rawValue === '' ? Number.NaN : Number(rawValue)
+    normalized[field] = Number.isFinite(value) ? value : null
+  }
+
+  return normalized.idDevice ? normalized : null
+}
+
+function devicesFromPayload(payload) {
+  const rawDevices = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.device)
+      ? payload.device
+      : payload?.device
+        ? [payload.device]
+        : []
+
+  return rawDevices.map(normalizeDevice).filter(Boolean)
+}
+
+export async function listDevices({ token }) {
+  const payload = await apiRequest('/devices', {
+    token,
+    fallbackMessage: 'Não foi possível carregar os dispositivos.',
+  })
+
+  return devicesFromPayload(payload)
+}
+
+export async function getDevice({ deviceId, token }) {
+  const payload = await apiRequest(
+    `/devices?idDevice=${encodeURIComponent(deviceId)}`,
+    {
+      token,
+      fallbackMessage: 'Não foi possível carregar os dados do dispositivo.',
+    },
+  )
+  const device = devicesFromPayload(payload)[0]
+
+  if (!device) {
+    throw new ApiError('A API não retornou os dados do dispositivo.', 404, payload)
+  }
+
+  return device
+}
+
+export function addDevice({ idDevice, name, token }) {
+  return apiRequest('/user/addDevice', {
+    method: 'POST',
+    token,
+    body: { idDevice, name: name.trim() },
+    fallbackMessage: 'Não foi possível adicionar o dispositivo.',
+  })
+}
+
+export async function resetTrip({ deviceId, token }) {
+  await apiRequest(
+    `/devices/resetTrip?idDevice=${encodeURIComponent(deviceId)}`,
+    {
+      method: 'POST',
+      token,
+      fallbackMessage: 'Não foi possível resetar a viagem.',
+    },
+  )
+
+  return getDevice({ deviceId, token })
 }
 
 export async function recalculateFuel({ deviceId, refueledGas, token }) {
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
-  const headers = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-  }
+  const recalculatePayload = await apiRequest(
+    `/devices/resetAndRecalculate?idDevice=${encodeURIComponent(deviceId)}`,
+    {
+      method: 'POST',
+      token,
+      body: { refueledGas },
+      fallbackMessage: 'Não foi possível recalibrar o combustível.',
+    },
+  )
+  const device = await getDevice({ deviceId, token })
 
-  if (token.trim()) {
-    headers.Authorization = `Token ${normalizeToken(token)}`
-  }
-
-  try {
-    const recalculateResponse = await fetch(
-      `${API_BASE_URL}/devices/resetAndRecalculate?idDevice=${encodeURIComponent(deviceId)}`,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ refueledGas }),
-        signal: controller.signal,
-      },
-    )
-    const recalculatePayload = await readResponse(recalculateResponse)
-
-    if (!recalculateResponse.ok) {
-      throw new ApiError(
-        getApiErrorMessage(recalculateResponse.status, recalculatePayload),
-        recalculateResponse.status,
-        recalculatePayload,
-      )
-    }
-
-    const deviceResponse = await fetch(
-      `${API_BASE_URL}/devices?idDevice=${encodeURIComponent(deviceId)}`,
-      {
-        method: 'GET',
-        headers,
-        signal: controller.signal,
-      },
-    )
-    const devicePayload = await readResponse(deviceResponse)
-
-    if (!deviceResponse.ok) {
-      throw new ApiError(
-        getApiErrorMessage(deviceResponse.status, devicePayload),
-        deviceResponse.status,
-        devicePayload,
-      )
-    }
-
-    return {
-      payload: devicePayload,
-      recalculatePayload,
-      newFactor: extractNewFactor(devicePayload),
-    }
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new ApiError('A API demorou para responder. Tente novamente.')
-    }
-
-    if (error instanceof ApiError) {
-      throw error
-    }
-
-    throw new ApiError(
-      'Não foi possível conectar ao backend. Verifique a API e tente novamente.',
-    )
-  } finally {
-    window.clearTimeout(timeout)
+  return {
+    device,
+    recalculatePayload,
+    newFactor: extractNewFactor(device),
   }
 }
+
+export { ApiError }

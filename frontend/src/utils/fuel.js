@@ -5,6 +5,10 @@ const FACTOR_KEYS = [
   'factor',
 ]
 
+function isNumeric(value) {
+  return value !== null && value !== '' && Number.isFinite(Number(value))
+}
+
 export class FuelValidationError extends Error {
   constructor(message) {
     super(message)
@@ -44,11 +48,23 @@ export function extractNewFactor(payload) {
     return null
   }
 
-  for (const key of FACTOR_KEYS) {
-    const candidate = Number(payload[key])
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const factor = extractNewFactor(item)
 
-    if (Number.isFinite(candidate)) {
-      return candidate
+      if (factor !== null) {
+        return factor
+      }
+    }
+
+    return null
+  }
+
+  for (const key of FACTOR_KEYS) {
+    const candidate = payload[key]
+
+    if (isNumeric(candidate)) {
+      return Number(candidate)
     }
   }
 
@@ -64,8 +80,55 @@ export function extractNewFactor(payload) {
 }
 
 export function formatFuelFactor(value) {
+  if (!isNumeric(value)) {
+    return '—'
+  }
+
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
-  }).format(value)
+  }).format(Number(value))
+}
+
+export function formatMetric(value, maximumFractionDigits = 1) {
+  if (!isNumeric(value)) {
+    return '—'
+  }
+
+  const number = Number(value)
+
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(number)
+}
+
+export function calculateFuelPercentage(level, capacity) {
+  if (!isNumeric(level) || !isNumeric(capacity)) {
+    return null
+  }
+
+  const numericLevel = Number(level)
+  const numericCapacity = Number(capacity)
+
+  if (numericCapacity <= 0) {
+    return null
+  }
+
+  return Math.min(100, Math.max(0, (numericLevel / numericCapacity) * 100))
+}
+
+export function calculateTripEfficiency(distance, consumption) {
+  if (!isNumeric(distance) || !isNumeric(consumption)) {
+    return null
+  }
+
+  const numericDistance = Number(distance)
+  const numericConsumption = Number(consumption)
+
+  if (numericConsumption <= 0) {
+    return null
+  }
+
+  return numericDistance / numericConsumption
 }

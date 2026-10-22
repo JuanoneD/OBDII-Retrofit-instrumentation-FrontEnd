@@ -1,120 +1,202 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import Feedback from '../components/Feedback.jsx'
+import LoadingState from '../components/LoadingState.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { useDocumentTitle } from '../hooks/useDocumentTitle.js'
+import {
+  ApiError,
+  getDevice,
+  recalculateFuel,
+} from '../services/deviceService.js'
+import {
+  calculateFuelPercentage,
+  formatFuelFactor,
+  formatMetric,
+  FuelValidationError,
+  parseFuelAmount,
+} from '../utils/fuel.js'
 
-function parseNumber(value) {
-  return Number.parseFloat(String(value).replace(',', '.'))
+function decodeDeviceId(value = '') {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
 }
 
 export default function FuelPage() {
+  const { idDevice: routeDeviceId } = useParams()
+  const deviceId = useMemo(
+    () => decodeDeviceId(routeDeviceId),
+    [routeDeviceId],
+  )
+  const [device, setDevice] = useState(null)
   const [refueledGas, setRefueledGas] = useState('')
-  const [tankCapacity, setTankCapacity] = useState('')
-  const [summary, setSummary] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const { token, clearSession } = useAuth()
 
-  function handleSubmit(event) {
-    event.preventDefault()
-    const added = parseNumber(refueledGas)
-    const capacity = parseNumber(tankCapacity)
+  useDocumentTitle('Calibrar combustível')
 
-    if (!Number.isFinite(added) || added <= 0) {
-      setError('Informe quantos litros foram abastecidos.')
-      return
-    }
+  const handleRequestError = useCallback(
+    (requestError, fallback) => {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        clearSession()
+        return
+      }
 
-    if (!Number.isFinite(capacity) || capacity <= 0) {
-      setError('Informe a capacidade do tanque.')
-      return
-    }
+      setError(requestError.message || fallback)
+    },
+    [clearSession],
+  )
 
+  const loadDevice = useCallback(async () => {
+    setIsLoading(true)
     setError('')
-    setSummary({ added, capacity })
+
+    try {
+      setDevice(await getDevice({ deviceId, token }))
+    } catch (requestError) {
+      handleRequestError(
+        requestError,
+        'Não foi possível carregar o dispositivo.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }, [deviceId, handleRequestError, token])
+
+  useEffect(() => {
+    loadDevice()
+  }, [loadDevice])
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+
+    try {
+      const amount = parseFuelAmount(refueledGas)
+      setIsSubmitting(true)
+      const result = await recalculateFuel({
+        deviceId,
+        refueledGas: amount,
+        token,
+      })
+
+      setDevice(result.device)
+      setRefueledGas('')
+      setSuccess(
+        `Calibração concluída. Novo fator: ${formatFuelFactor(result.newFactor)}.`,
+      )
+    } catch (requestError) {
+      if (requestError instanceof FuelValidationError) {
+        setError(requestError.message)
+        return
+      }
+
+      handleRequestError(
+        requestError,
+        'Não foi possível recalibrar o combustível.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  if (summary) {
+  const detailPath = `/devices/${encodeURIComponent(deviceId)}`
+
+  if (isLoading) {
     return (
-      <main className="fuel-screen fuel-summary-screen">
-        <header className="screen-header">
-          <p>OBD-II RETROFIT</p>
-          <h1>Combustível</h1>
-          <span>Resumo da calibração</span>
-        </header>
-
-        <section className="fuel-result-hero">
-          <span>Combustível estimado</span>
-          <strong>{summary.capacity.toFixed(1).replace('.', ',')} L</strong>
-          <small>Capacidade informada do tanque</small>
-        </section>
-
-        <section className="fuel-result-grid" aria-label="Informações de combustível">
-          <article>
-            <span>Último abastecimento</span>
-            <strong>{summary.added.toFixed(1).replace('.', ',')} L</strong>
-          </article>
-          <article>
-            <span>Média de consumo</span>
-            <strong>— km/L</strong>
-          </article>
-          <article>
-            <span>Autonomia estimada</span>
-            <strong>— km</strong>
-          </article>
-          <article>
-            <span>Status</span>
-            <strong className="result-ok">Calibrado</strong>
-          </article>
-        </section>
-
-        <button className="secondary-button" type="button" onClick={() => setSummary(null)}>
-          NOVA CALIBRAÇÃO
-        </button>
+      <main className="page-shell page-narrow">
+        <LoadingState message="Carregando dados de combustível..." />
       </main>
     )
   }
 
+  if (!device) {
+    return (
+      <main className="page-shell page-narrow">
+        <Link className="back-link" to={detailPath}>← Voltar para o dispositivo</Link>
+        <Feedback title="Combustível indisponível">
+          {error || 'Não foi possível encontrar este dispositivo.'}
+        </Feedback>
+      </main>
+    )
+  }
+
+  const percentage = calculateFuelPercentage(
+    device.gasolineLevel,
+    device.tankCapacity,
+  )
+
   return (
-    <main className="fuel-screen">
-      <header className="screen-header">
-        <p>OBD-II RETROFIT</p>
-        <h1>Combustível</h1>
-        <span>Calibre o tanque informando o abastecimento.</span>
+    <main className="page-shell page-narrow fuel-page">
+      <Link className="back-link" to={detailPath}>← Voltar para o dispositivo</Link>
+
+      <header className="page-heading">
+        <p className="eyebrow">{device.name || 'VEÍCULO'}</p>
+        <h1>Calibrar combustível</h1>
+        <span>Informe quantos litros entraram ao completar o tanque.</span>
       </header>
 
-      <form className="fuel-card fuel-calibration-card" onSubmit={handleSubmit} noValidate>
-        <div className="fuel-card-icon">⛽</div>
-        <h2>Calibrar combustível</h2>
-        <p className="fuel-card-description">Essas informações ajudam a estimar o combustível disponível e o consumo do veículo.</p>
+      <section className="fuel-result-hero" aria-label="Combustível atual">
+        <span>Combustível estimado antes da calibração</span>
+        <strong>{formatMetric(device.gasolineLevel)} L</strong>
+        <small>
+          {percentage === null
+            ? `Tanque de ${formatMetric(device.tankCapacity)} L`
+            : `${formatMetric(percentage)}% de um tanque de ${formatMetric(device.tankCapacity)} L`}
+        </small>
+      </section>
 
-        <label htmlFor="refueled-gas">Quanto você abasteceu?</label>
+      <section className="fuel-result-grid" aria-label="Informações atuais">
+        <article>
+          <span>Capacidade</span>
+          <strong>{formatMetric(device.tankCapacity)} L</strong>
+        </article>
+        <article>
+          <span>Fator atual</span>
+          <strong>{formatFuelFactor(device.fuelConsumptionFactor)}</strong>
+        </article>
+      </section>
+
+      <form className="fuel-card fuel-calibration-card" onSubmit={handleSubmit} noValidate>
+        <div className="fuel-card-icon" aria-hidden="true">⛽</div>
+        <h2>Registrar abastecimento</h2>
+        <p className="fuel-card-description">
+          O backend comparará o volume abastecido com o consumo estimado e ajustará o fator automaticamente.
+        </p>
+
+        <label htmlFor="refueled-gas">Quantos litros foram abastecidos?</label>
         <div className="liters-field">
           <input
             id="refueled-gas"
             type="text"
             inputMode="decimal"
+            autoComplete="off"
             placeholder="Ex.: 42,5"
             value={refueledGas}
             onChange={(event) => setRefueledGas(event.target.value)}
+            disabled={isSubmitting}
           />
           <span>litros</span>
         </div>
 
-        <label htmlFor="tank-capacity">Qual é a capacidade do tanque?</label>
-        <div className="liters-field">
-          <input
-            id="tank-capacity"
-            type="text"
-            inputMode="decimal"
-            placeholder="Ex.: 45"
-            value={tankCapacity}
-            onChange={(event) => setTankCapacity(event.target.value)}
-          />
-          <span>litros</span>
-        </div>
+        {success && <Feedback type="success">{success}</Feedback>}
+        {error && <Feedback>{error}</Feedback>}
 
-        {error && <div className="feedback feedback-error" role="alert">{error}</div>}
-
-        <button className="primary-button" type="submit">
-          CALIBRAR COMBUSTÍVEL
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'RECALIBRANDO...' : 'RECALIBRAR COMBUSTÍVEL'}
         </button>
       </form>
+
+      <p className="screen-note">
+        Ao concluir, o nível de combustível será atualizado para a capacidade total do tanque.
+      </p>
     </main>
   )
 }

@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   addDevice,
   ApiError,
+  getDtcs,
   listDevices,
   recalculateFuel,
   resetTrip,
+  setDiagnosticMode,
 } from './deviceService.js'
 
 function response(payload, status = 200) {
@@ -25,6 +27,7 @@ const DEVICE = {
   fuelConsumptionFactor: 1.2345,
   totalDistance: 120,
   tripConsumption: 10,
+  diagnoseMode: false,
 }
 
 afterEach(() => {
@@ -38,14 +41,16 @@ describe('deviceService', () => {
       'fetch',
       vi.fn().mockResolvedValue(
         response({
-          device: [{ ...DEVICE, gasolineLevel: '45.5' }],
+          device: [
+            { ...DEVICE, gasolineLevel: '45.5', diagnoseMode: 'true' },
+          ],
           totalDevice: 1,
         }),
       ),
     )
 
     await expect(listDevices({ token: 'abc' })).resolves.toEqual([
-      { ...DEVICE, gasolineLevel: 45.5 },
+      { ...DEVICE, gasolineLevel: 45.5, diagnoseMode: true },
     ])
   })
 
@@ -69,7 +74,7 @@ describe('deviceService', () => {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          Authorization: 'Bearer token-de-teste',
+          Authorization: 'Token token-de-teste',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ refueledGas: 4.4 }),
@@ -82,7 +87,7 @@ describe('deviceService', () => {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          Authorization: 'Bearer token-de-teste',
+          Authorization: 'Token token-de-teste',
         },
       }),
     )
@@ -131,6 +136,58 @@ describe('deviceService', () => {
       '/api/devices/resetTrip?idDevice=AA%3ABB%3ACC%3ADD%3AEE%3AFF',
       expect.objectContaining({ method: 'POST' }),
     )
+  })
+
+  it('liga o modo diagnóstico pelo endpoint da v1.1', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response(null))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await setDiagnosticMode({
+      deviceId: DEVICE.idDevice,
+      diagnoseMode: true,
+      token: 'token-de-teste',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/devices/setOperationMode?idDevice=AA%3ABB%3ACC%3ADD%3AEE%3AFF',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Token token-de-teste',
+        }),
+        body: JSON.stringify({ diagnoseMode: true }),
+      }),
+    )
+  })
+
+  it('lista e normaliza os DTCs ativos', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        response({
+          dtcs: [
+            {
+              code: 'p0301',
+              title: 'Falha de ignição no cilindro 1',
+              description: 'Verifique vela, bobina e bico injetor.',
+              receivedAt: '2026-10-31T10:00:00-03:00',
+            },
+          ],
+          totalDtcs: 1,
+        }),
+      ),
+    )
+
+    await expect(
+      getDtcs({ deviceId: DEVICE.idDevice, token: 'abc' }),
+    ).resolves.toEqual([
+      {
+        code: 'P0301',
+        title: 'Falha de ignição no cilindro 1',
+        description: 'Verifique vela, bobina e bico injetor.',
+        receivedAt: '2026-10-31T10:00:00-03:00',
+      },
+    ])
   })
 
   it('transforma a resposta 401 em erro de sessão', async () => {

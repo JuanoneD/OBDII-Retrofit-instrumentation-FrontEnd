@@ -221,6 +221,23 @@ export default function DeviceDetailPage() {
               Resetar
             </button>
           </article>
+
+          <article className="action-card diagnostic-action-card">
+            <div className="action-icon diagnostic-action-icon" aria-hidden="true">!</div>
+            <div>
+              <h3>Diagnóstico do veículo</h3>
+              <p>Ative a leitura da ECU e consulte os códigos de falha.</p>
+              <span className={`action-status ${device.diagnoseMode ? 'is-active' : ''}`}>
+                {device.diagnoseMode ? 'Modo ativo' : 'Modo desativado'}
+              </span>
+            </div>
+            <Link
+              className="primary-link-button"
+              to={`/devices/${encodeURIComponent(device.idDevice)}/diagnostico`}
+            >
+              Ver diagnóstico
+            </Link>
+          </article>
         </div>
       </section>
 

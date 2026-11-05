@@ -90,7 +90,7 @@ export async function apiRequest(
   const normalizedToken = normalizeToken(token)
 
   if (normalizedToken) {
-    headers.Authorization = `Bearer ${normalizedToken}`
+    headers.Authorization = `Token ${normalizedToken}`
   }
 
   if (body !== undefined) {

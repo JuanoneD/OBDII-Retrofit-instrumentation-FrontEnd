@@ -769,7 +769,7 @@ input:disabled {
 
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 11px;
 }
 
@@ -803,6 +803,17 @@ input:disabled {
   background: #292f2a;
 }
 
+.diagnostic-action-card {
+  border-color: #66522e;
+  background: linear-gradient(145deg, #282218, #191b18);
+}
+
+.diagnostic-action-icon {
+  color: #f0c66d;
+  background: rgba(224, 170, 61, 0.14);
+  font-weight: 850;
+}
+
 .action-card h3 {
   margin: 2px 0 5px;
   font-size: 0.82rem;
@@ -814,6 +825,18 @@ input:disabled {
   color: #777f79;
   font-size: 0.64rem;
   line-height: 1.45;
+}
+
+.action-status {
+  display: inline-block;
+  margin-top: 8px;
+  color: #a89b7f;
+  font-size: 0.58rem;
+  font-weight: 750;
+}
+
+.action-status.is-active {
+  color: #8ce294;
 }
 
 .action-card .primary-link-button,
@@ -851,6 +874,221 @@ input:disabled {
   flex: 0 0 auto;
   align-items: center;
   gap: 16px;
+}
+
+.diagnostic-status-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 24px;
+  border: 1px solid #494233;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #242119, #171a18);
+}
+
+.diagnostic-status-panel.is-active {
+  border-color: #34733b;
+  background: linear-gradient(135deg, #18351d, #131e15);
+}
+
+.diagnostic-status-copy {
+  max-width: 590px;
+}
+
+.diagnostic-status-badge {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 5px 8px;
+  border: 1px solid #6d5c38;
+  border-radius: 999px;
+  color: #d8b96f;
+  background: #2e281a;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.diagnostic-status-panel.is-active .diagnostic-status-badge {
+  border-color: #3f8647;
+  color: #9ae7a1;
+  background: #18331c;
+}
+
+.diagnostic-status-copy h2 {
+  margin: 0;
+  color: #edf1ed;
+  font-size: 1.08rem;
+  font-weight: 650;
+}
+
+.diagnostic-status-copy p {
+  margin: 7px 0 0;
+  color: #959086;
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.diagnostic-status-panel.is-active .diagnostic-status-copy p {
+  color: #9bb49d;
+}
+
+.diagnostic-toggle {
+  display: inline-flex;
+  min-width: 138px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid #5c5547;
+  border-radius: 10px;
+  color: #d4c9b4;
+  background: #211f1a;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.diagnostic-toggle.is-active {
+  border-color: #42844a;
+  color: #b5eaba;
+  background: #182d1b;
+}
+
+.diagnostic-toggle:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.diagnostic-toggle-track {
+  position: relative;
+  width: 34px;
+  height: 19px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #595449;
+  transition: background 150ms ease;
+}
+
+.diagnostic-toggle-track span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #f0eee9;
+  transition: transform 150ms ease;
+}
+
+.diagnostic-toggle.is-active .diagnostic-toggle-track {
+  background: #3fa749;
+}
+
+.diagnostic-toggle.is-active .diagnostic-toggle-track span {
+  transform: translateX(15px);
+}
+
+.dtc-section {
+  margin-top: 28px;
+}
+
+.dtc-section-heading {
+  align-items: center;
+  margin-bottom: 13px;
+}
+
+.dtc-section-heading > div span {
+  display: block;
+  margin-top: 5px;
+}
+
+.dtc-section-heading .secondary-button {
+  min-height: 38px;
+}
+
+.dtc-list {
+  display: grid;
+  gap: 11px;
+}
+
+.dtc-card {
+  padding: 20px;
+  border: 1px solid #4e3734;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #211918, #171817);
+}
+
+.dtc-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dtc-card code {
+  padding: 5px 8px;
+  border: 1px solid #8b4942;
+  border-radius: 7px;
+  color: #ffaaa2;
+  background: #331b19;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.dtc-card-heading span {
+  color: #716b69;
+  font-size: 0.58rem;
+}
+
+.dtc-card h3 {
+  margin: 15px 0 7px;
+  color: #eee9e8;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.dtc-card p {
+  margin: 0;
+  color: #9b918f;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.dtc-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 25px;
+  border: 1px dashed #3d493f;
+  border-radius: 13px;
+  background: #161a17;
+}
+
+.dtc-empty-state > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #8ce294;
+  background: #1d3321;
+  font-weight: 800;
+}
+
+.dtc-empty-state h3 {
+  margin: 0;
+  color: #dfe4df;
+  font-size: 0.82rem;
+}
+
+.dtc-empty-state p {
+  margin: 5px 0 0;
+  color: #788079;
+  font-size: 0.66rem;
+  line-height: 1.5;
 }
 
 .fuel-result-hero {
@@ -996,9 +1234,23 @@ input:disabled {
 
   .page-heading-actions,
   .detail-heading,
-  .confirmation-panel {
+  .confirmation-panel,
+  .diagnostic-status-panel {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .diagnostic-toggle {
+    width: 100%;
+  }
+
+  .dtc-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dtc-section-heading .secondary-button {
+    width: 100%;
   }
 
   .page-heading-actions .primary-link-button {

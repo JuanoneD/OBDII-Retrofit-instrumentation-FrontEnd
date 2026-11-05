@@ -7,6 +7,7 @@ import {
 import ScrollToTop from './components/ScrollToTop.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import AddDevicePage from './pages/AddDevicePage.jsx'
+import DiagnosticPage from './pages/DiagnosticPage.jsx'
 import DeviceDetailPage from './pages/DeviceDetailPage.jsx'
 import DevicesPage from './pages/DevicesPage.jsx'
 import FuelPage from './pages/FuelPage.jsx'
@@ -30,6 +31,10 @@ export default function App() {
           <Route
             path="/devices/:idDevice/combustivel"
             element={<FuelPage />}
+          />
+          <Route
+            path="/devices/:idDevice/diagnostico"
+            element={<DiagnosticPage />}
           />
         </Route>
 

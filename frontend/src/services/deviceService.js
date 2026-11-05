@@ -9,6 +9,10 @@ const NUMBER_FIELDS = [
   'tripConsumption',
 ]
 
+function normalizeBoolean(value) {
+  return value === true || value === 1 || String(value).toLowerCase() === 'true'
+}
+
 function normalizeDevice(device) {
   if (!device || typeof device !== 'object' || Array.isArray(device)) {
     return null
@@ -18,6 +22,7 @@ function normalizeDevice(device) {
     ...device,
     idDevice: String(device.idDevice || device.id || ''),
     name: String(device.name || ''),
+    diagnoseMode: normalizeBoolean(device.diagnoseMode),
   }
 
   for (const field of NUMBER_FIELDS) {
@@ -39,6 +44,33 @@ function devicesFromPayload(payload) {
         : []
 
   return rawDevices.map(normalizeDevice).filter(Boolean)
+}
+
+function normalizeDtc(dtc) {
+  if (!dtc || typeof dtc !== 'object' || Array.isArray(dtc)) {
+    return null
+  }
+
+  const code = String(dtc.code || '').trim().toUpperCase()
+
+  if (!code) {
+    return null
+  }
+
+  return {
+    code,
+    title: String(dtc.title || 'Código não encontrado na base'),
+    description: String(dtc.description || ''),
+    receivedAt: dtc.receivedAt ? String(dtc.receivedAt) : '',
+  }
+}
+
+function dtcsFromPayload(payload) {
+  const rawDtcs = Array.isArray(payload) ? payload : payload?.dtcs
+
+  return Array.isArray(rawDtcs)
+    ? rawDtcs.map(normalizeDtc).filter(Boolean)
+    : []
 }
 
 export async function listDevices({ token }) {
@@ -106,6 +138,30 @@ export async function recalculateFuel({ deviceId, refueledGas, token }) {
     recalculatePayload,
     newFactor: extractNewFactor(device),
   }
+}
+
+export function setDiagnosticMode({ deviceId, diagnoseMode, token }) {
+  return apiRequest(
+    `/devices/setOperationMode?idDevice=${encodeURIComponent(deviceId)}`,
+    {
+      method: 'POST',
+      token,
+      body: { diagnoseMode: Boolean(diagnoseMode) },
+      fallbackMessage: 'Não foi possível alterar o modo diagnóstico.',
+    },
+  )
+}
+
+export async function getDtcs({ deviceId, token }) {
+  const payload = await apiRequest(
+    `/devices/getDTCs?idDevice=${encodeURIComponent(deviceId)}`,
+    {
+      token,
+      fallbackMessage: 'Não foi possível carregar os códigos de falha.',
+    },
+  )
+
+  return dtcsFromPayload(payload)
 }
 
 export { ApiError }

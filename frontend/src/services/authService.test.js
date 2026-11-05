@@ -69,7 +69,7 @@ describe('authService', () => {
       '/api/user/logout',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ Authorization: 'Bearer abc123' }),
+        headers: expect.objectContaining({ Authorization: 'Token abc123' }),
       }),
     )
   })

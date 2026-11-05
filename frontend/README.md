@@ -1,23 +1,26 @@
 # Frontend — OBD-II Retrofit
 
-Aplicação React para autenticação, vínculo de dispositivos e acompanhamento dos
-dados de combustível e viagem enviados pela ESP32.
+Aplicação React v1.1 para autenticação, vínculo de dispositivos,
+acompanhamento dos dados de combustível e consulta dos diagnósticos enviados
+pela ESP32.
 
 ## Funcionalidades
 
 - login e cadastro com login automático;
-- sessão autenticada com `Authorization: Bearer <token>`;
+- sessão autenticada com `Authorization: Token <token>`;
 - lista de dispositivos vinculados ao usuário;
 - vínculo de uma ESP32 pelo MAC e nome do veículo;
 - detalhe com combustível, capacidade, fator, distância e consumo;
 - recalibração do fator de combustível após abastecimento;
 - reset da distância e do consumo da viagem;
+- ativação e desativação do modo diagnóstico;
+- listagem dos DTCs ativos com código, título, descrição e data da leitura;
 - logout e proteção das rotas privadas.
 
 ## Executar localmente
 
-O backend ASP.NET deve estar disponível antes de iniciar o frontend. Por padrão,
-o proxy de desenvolvimento usa `http://127.0.0.1:5000`.
+O backend Django deve estar disponível antes de iniciar o frontend. Por padrão,
+o proxy de desenvolvimento usa `https://juan.tail7c21f7.ts.net:8443`.
 
 ```bash
 cp .env.example .env
@@ -27,7 +30,8 @@ npm run dev
 
 Para usar outro servidor, altere `VITE_API_PROXY_TARGET` no `.env`. O navegador
 continua chamando `/api`, e o Vite encaminha as requisições para o backend.
-Na Vercel, `/api` é encaminhado ao endereço HTTPS publicado pelo Tailscale Funnel.
+Na Vercel, `/api` é encaminhado para
+`https://juan.tail7c21f7.ts.net:8443`.
 
 ## Rotas
 
@@ -39,6 +43,7 @@ Na Vercel, `/api` é encaminhado ao endereço HTTPS publicado pelo Tailscale Fun
 | `/devices/novo` | Vincular uma ESP32 |
 | `/devices/:idDevice` | Consultar dados e resetar viagem |
 | `/devices/:idDevice/combustivel` | Recalibrar combustível |
+| `/devices/:idDevice/diagnostico` | Alterar o modo diagnóstico e consultar DTCs |
 
 ## Verificações
 

@@ -118,6 +118,14 @@ export function calculateFuelPercentage(level, capacity) {
   return Math.min(100, Math.max(0, (numericLevel / numericCapacity) * 100))
 }
 
+export function canRecalculateFuelFactor(level, capacity) {
+  if (!isNumeric(level) || !isNumeric(capacity)) {
+    return false
+  }
+
+  return Number(capacity) - Number(level) > 1
+}
+
 export function calculateTripEfficiency(distance, consumption) {
   if (!isNumeric(distance) || !isNumeric(consumption)) {
     return null

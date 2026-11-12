@@ -1,6 +1,6 @@
 # Frontend — OBD-II Retrofit
 
-Aplicação React v1.1 para autenticação, vínculo de dispositivos,
+A aplicação React v1.1.1 oferece autenticação, vínculo de dispositivos,
 acompanhamento dos dados de combustível e consulta dos diagnósticos enviados
 pela ESP32.
 
@@ -15,6 +15,7 @@ pela ESP32.
 - reset da distância e do consumo da viagem;
 - ativação e desativação do modo diagnóstico;
 - listagem dos DTCs ativos com código, título, descrição e data da leitura;
+- histórico de falhas detectadas pela ESP, com atualização automática;
 - logout e proteção das rotas privadas.
 
 ## Executar localmente
@@ -43,7 +44,7 @@ Na Vercel, `/api` é encaminhado para
 | `/devices/novo` | Vincular uma ESP32 |
 | `/devices/:idDevice` | Consultar dados e resetar viagem |
 | `/devices/:idDevice/combustivel` | Recalibrar combustível |
-| `/devices/:idDevice/diagnostico` | Alterar o modo diagnóstico e consultar DTCs |
+| `/devices/:idDevice/diagnostico` | Alterar o modo diagnóstico e consultar DTCs e falhas detectadas pela ESP |
 
 ## Verificações
 

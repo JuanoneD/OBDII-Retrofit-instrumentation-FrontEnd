@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   addDevice,
   ApiError,
+  getDetectedErrors,
   getDtcs,
   listDevices,
   recalculateFuel,
@@ -188,6 +189,47 @@ describe('deviceService', () => {
         receivedAt: '2026-10-31T10:00:00-03:00',
       },
     ])
+  })
+
+  it('lista e normaliza as falhas detectadas pela ESP', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      response({
+        errors: [
+          {
+            title: ' Superaquecimento ',
+            description: ' Temperatura acima de 105 °C ',
+            detectedAt: '2026-11-11T10:00:00-03:00',
+          },
+          { title: '', description: 'Registro inválido' },
+        ],
+        totalErrors: 2,
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      getDetectedErrors({
+        deviceId: DEVICE.idDevice,
+        token: 'token-de-teste',
+      }),
+    ).resolves.toEqual([
+      {
+        title: 'Superaquecimento',
+        description: 'Temperatura acima de 105 °C',
+        detectedAt: '2026-11-11T10:00:00-03:00',
+      },
+    ])
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/devices/getDetectErrors?idDevice=AA%3ABB%3ACC%3ADD%3AEE%3AFF',
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Token token-de-teste',
+        },
+      }),
+    )
   })
 
   it('transforma a resposta 401 em erro de sessão', async () => {

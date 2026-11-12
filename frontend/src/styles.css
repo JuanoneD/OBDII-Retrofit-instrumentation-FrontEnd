@@ -989,6 +989,73 @@ input:disabled {
   transform: translateX(15px);
 }
 
+.detected-errors-section {
+  margin-top: 28px;
+}
+
+.detected-errors-section .feedback {
+  margin-bottom: 12px;
+}
+
+.detected-errors-section .section-heading small {
+  display: block;
+  margin-top: 4px;
+  color: #756f65;
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+.detected-error-list {
+  display: grid;
+  gap: 11px;
+}
+
+.detected-error-card {
+  padding: 20px;
+  border: 1px solid #66502b;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #241f16, #181817);
+}
+
+.detected-error-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detected-error-card-heading > span {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid #987038;
+  border-radius: 50%;
+  color: #f3ca76;
+  background: #342817;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.detected-error-card time {
+  color: #827765;
+  font-size: 0.58rem;
+}
+
+.detected-error-card h3 {
+  margin: 14px 0 7px;
+  color: #f1ece2;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.detected-error-card p {
+  margin: 0;
+  color: #a09889;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
 .dtc-section {
   margin-top: 28px;
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import DetectedErrorsSection from '../components/DetectedErrorsSection.jsx'
 import Feedback from '../components/Feedback.jsx'
 import LoadingState from '../components/LoadingState.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -7,6 +8,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle.js'
 import {
   ApiError,
   getDevice,
+  getDetectedErrors,
   getDtcs,
   setDiagnosticMode,
 } from '../services/deviceService.js'
@@ -44,23 +46,27 @@ export default function DiagnosticPage() {
   )
   const [device, setDevice] = useState(null)
   const [dtcs, setDtcs] = useState([])
+  const [detectedErrors, setDetectedErrors] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdatingMode, setIsUpdatingMode] = useState(false)
   const [isRefreshingDtcs, setIsRefreshingDtcs] = useState(false)
+  const [isRefreshingDetectedErrors, setIsRefreshingDetectedErrors] =
+    useState(false)
   const [error, setError] = useState('')
+  const [detectedErrorsError, setDetectedErrorsError] = useState('')
   const [success, setSuccess] = useState('')
   const { token, clearSession } = useAuth()
 
   useDocumentTitle(`Diagnóstico${device?.name ? ` — ${device.name}` : ''}`)
 
   const handleRequestError = useCallback(
-    (requestError, fallback) => {
+    (requestError, fallback, setRequestError = setError) => {
       if (requestError instanceof ApiError && requestError.status === 401) {
         clearSession()
         return
       }
 
-      setError(requestError.message || fallback)
+      setRequestError(requestError.message || fallback)
     },
     [clearSession],
   )
@@ -68,22 +74,44 @@ export default function DiagnosticPage() {
   const loadDiagnosticData = useCallback(async () => {
     setIsLoading(true)
     setError('')
+    setDetectedErrorsError('')
 
-    try {
-      const [loadedDevice, loadedDtcs] = await Promise.all([
+    const [deviceResult, dtcsResult, detectedErrorsResult] =
+      await Promise.allSettled([
         getDevice({ deviceId, token }),
         getDtcs({ deviceId, token }),
+        getDetectedErrors({ deviceId, token }),
       ])
-      setDevice(loadedDevice)
-      setDtcs(loadedDtcs)
-    } catch (requestError) {
+
+    if (deviceResult.status === 'fulfilled') {
+      setDevice(deviceResult.value)
+    } else {
       handleRequestError(
-        requestError,
-        'Não foi possível carregar o diagnóstico do veículo.',
+        deviceResult.reason,
+        'Não foi possível carregar o dispositivo.',
       )
-    } finally {
-      setIsLoading(false)
     }
+
+    if (dtcsResult.status === 'fulfilled') {
+      setDtcs(dtcsResult.value)
+    } else {
+      handleRequestError(
+        dtcsResult.reason,
+        'Não foi possível carregar os códigos de falha.',
+      )
+    }
+
+    if (detectedErrorsResult.status === 'fulfilled') {
+      setDetectedErrors(detectedErrorsResult.value)
+    } else {
+      handleRequestError(
+        detectedErrorsResult.reason,
+        'Não foi possível carregar as falhas detectadas.',
+        setDetectedErrorsError,
+      )
+    }
+
+    setIsLoading(false)
   }, [deviceId, handleRequestError, token])
 
   useEffect(() => {
@@ -136,6 +164,37 @@ export default function DiagnosticPage() {
       setIsRefreshingDtcs(false)
     }
   }
+
+  const handleRefreshDetectedErrors = useCallback(async () => {
+    setIsRefreshingDetectedErrors(true)
+    setDetectedErrorsError('')
+
+    try {
+      setDetectedErrors(await getDetectedErrors({ deviceId, token }))
+    } catch (requestError) {
+      handleRequestError(
+        requestError,
+        'Não foi possível atualizar as falhas detectadas.',
+        setDetectedErrorsError,
+      )
+    } finally {
+      setIsRefreshingDetectedErrors(false)
+    }
+  }, [deviceId, handleRequestError, token])
+
+  useEffect(() => {
+    if (!device?.diagnoseMode) {
+      return undefined
+    }
+
+    const intervalId = globalThis.setInterval(() => {
+      if (document.visibilityState !== 'hidden') {
+        handleRefreshDetectedErrors()
+      }
+    }, 15000)
+
+    return () => globalThis.clearInterval(intervalId)
+  }, [device?.diagnoseMode, handleRefreshDetectedErrors])
 
   const detailPath = `/devices/${encodeURIComponent(deviceId)}`
 
@@ -216,6 +275,14 @@ export default function DiagnosticPage() {
           </span>
         </button>
       </section>
+
+      <DetectedErrorsSection
+        detectedErrors={detectedErrors}
+        error={detectedErrorsError}
+        isLoading={isRefreshingDetectedErrors}
+        isAutoRefreshEnabled={device.diagnoseMode}
+        onRefresh={handleRefreshDetectedErrors}
+      />
 
       <section className="dtc-section" aria-labelledby="dtc-list-title">
         <div className="section-heading dtc-section-heading">

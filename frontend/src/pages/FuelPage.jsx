@@ -11,6 +11,7 @@ import {
 } from '../services/deviceService.js'
 import {
   calculateFuelPercentage,
+  canRecalculateFuelFactor,
   formatFuelFactor,
   formatMetric,
   FuelValidationError,
@@ -80,6 +81,10 @@ export default function FuelPage() {
 
     try {
       const amount = parseFuelAmount(refueledGas)
+      const shouldRecalculateFactor = canRecalculateFuelFactor(
+        device.gasolineLevel,
+        device.tankCapacity,
+      )
       setIsSubmitting(true)
       const result = await recalculateFuel({
         deviceId,
@@ -90,7 +95,9 @@ export default function FuelPage() {
       setDevice(result.device)
       setRefueledGas('')
       setSuccess(
-        `Calibração concluída. Novo fator: ${formatFuelFactor(result.newFactor)}.`,
+        shouldRecalculateFactor
+          ? `Calibração concluída. Novo fator: ${formatFuelFactor(result.newFactor)}.`
+          : 'Abastecimento registrado. O fator foi mantido porque o consumo estimado ainda não ultrapassou 1 litro.',
       )
     } catch (requestError) {
       if (requestError instanceof FuelValidationError) {
@@ -168,7 +175,8 @@ export default function FuelPage() {
         <div className="fuel-card-icon" aria-hidden="true">⛽</div>
         <h2>Registrar abastecimento</h2>
         <p className="fuel-card-description">
-          O backend comparará o volume abastecido com o consumo estimado e ajustará o fator automaticamente.
+          O backend comparará o volume abastecido com o consumo estimado. O
+          fator só será ajustado quando o consumo superar 1 litro.
         </p>
 
         <label htmlFor="refueled-gas">Quantos litros foram abastecidos?</label>

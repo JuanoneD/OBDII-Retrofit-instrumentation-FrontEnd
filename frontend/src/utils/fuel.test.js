@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateFuelPercentage,
   calculateTripEfficiency,
+  canRecalculateFuelFactor,
   FuelValidationError,
   extractNewFactor,
   formatMetric,
@@ -58,6 +59,12 @@ describe('métricas de combustível', () => {
   it('calcula eficiência apenas quando há consumo', () => {
     expect(calculateTripEfficiency(120, 10)).toBe(12)
     expect(calculateTripEfficiency(120, 0)).toBeNull()
+  })
+
+  it('só permite recalcular o fator após consumo superior a um litro', () => {
+    expect(canRecalculateFuelFactor(49, 50)).toBe(false)
+    expect(canRecalculateFuelFactor(48.99, 50)).toBe(true)
+    expect(canRecalculateFuelFactor(null, 50)).toBe(false)
   })
 
   it('formata números para exibição em português', () => {

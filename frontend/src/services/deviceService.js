@@ -73,6 +73,39 @@ function dtcsFromPayload(payload) {
     : []
 }
 
+function normalizeDetectedError(detectedError) {
+  if (
+    !detectedError ||
+    typeof detectedError !== 'object' ||
+    Array.isArray(detectedError)
+  ) {
+    return null
+  }
+
+  const title = String(detectedError.title || '').trim()
+  const description = String(detectedError.description || '').trim()
+
+  if (!title || !description) {
+    return null
+  }
+
+  return {
+    title,
+    description,
+    detectedAt: detectedError.detectedAt
+      ? String(detectedError.detectedAt)
+      : '',
+  }
+}
+
+function detectedErrorsFromPayload(payload) {
+  const rawErrors = Array.isArray(payload) ? payload : payload?.errors
+
+  return Array.isArray(rawErrors)
+    ? rawErrors.map(normalizeDetectedError).filter(Boolean)
+    : []
+}
+
 export async function listDevices({ token }) {
   const payload = await apiRequest('/devices', {
     token,
@@ -162,6 +195,18 @@ export async function getDtcs({ deviceId, token }) {
   )
 
   return dtcsFromPayload(payload)
+}
+
+export async function getDetectedErrors({ deviceId, token }) {
+  const payload = await apiRequest(
+    `/devices/getDetectErrors?idDevice=${encodeURIComponent(deviceId)}`,
+    {
+      token,
+      fallbackMessage: 'Não foi possível carregar as falhas detectadas.',
+    },
+  )
+
+  return detectedErrorsFromPayload(payload)
 }
 
 export { ApiError }

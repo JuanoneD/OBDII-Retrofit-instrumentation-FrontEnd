@@ -86,7 +86,7 @@ export function formatFuelFactor(value) {
 
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
+    maximumFractionDigits: 12,
   }).format(Number(value))
 }
 

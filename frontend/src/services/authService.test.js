@@ -51,7 +51,7 @@ describe('authService', () => {
       '/api/user',
       expect.objectContaining({
         body: JSON.stringify({
-          username: 'Maria',
+          name: 'Maria',
           email: 'maria@teste.com',
           password: 'segredo',
         }),

@@ -23,7 +23,7 @@ export async function loginUser({ email, password }) {
 export async function registerUser({ name, email, password }) {
   const payload = await apiRequest('/user', {
     method: 'POST',
-    body: { username: name.trim(), email: email.trim(), password },
+    body: { name: name.trim(), email: email.trim(), password },
     fallbackMessage: 'Não foi possível criar a conta.',
   })
 

@@ -5,6 +5,7 @@ import {
   canRecalculateFuelFactor,
   FuelValidationError,
   extractNewFactor,
+  formatFuelFactor,
   formatMetric,
   parseFuelAmount,
 } from './fuel.js'
@@ -68,6 +69,7 @@ describe('métricas de combustível', () => {
   })
 
   it('formata números para exibição em português', () => {
+    expect(formatFuelFactor(8.58e-9)).toBe('0,00000000858')
     expect(formatMetric(42.5)).toBe('42,5')
     expect(formatMetric(null)).toBe('—')
   })
